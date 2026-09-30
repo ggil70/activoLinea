@@ -1,0 +1,14 @@
+#!/bin/bash
+/usr/share/php/cake/console/cake -app /var/www/naturales/app generar_archivos_2
+fecha=$(date +%Y%m%d)
+cd /tmp/$fecha/
+ftp -n <<EOF
+open  FSCCSAPL24FTP
+user BAP2023@activo.com extbL.12n20$
+lcd /tmp/$fecha
+cd Lcash
+mkdir $fecha
+cd $fecha
+prompt
+mput *
+EOF

@@ -1,0 +1,394 @@
+<?php
+/**
+ * Formulario de recarga prepago numeros afiliados
+**/
+?>
+<div>
+<h2 class="user">Recarga Servicios Prepago</h2>
+<div class="line_title_orange"></div>
+</div>
+
+<div class="paso_nro_actual">1</div>
+<div class="paso_desc_actual">Solicitud de Informaci&oacute;n</div>
+<div class="paso_nro">2</div>
+<div class="paso_desc">Confirmaci&oacute;n</div>
+<div class="paso_nro">3</div>
+<?php $usuario = $this->Session->read('usuarios.datos'); if( !$activo->otp_validado() && (!isset($usuario['rol_juridico_id']) || !in_array($usuario['rol_juridico_id'],array(3,5))) ) { ?>
+<div class="paso_desc">Código de Autorización</div>
+<div class="paso_nro">4</div>
+<?php } ?>
+<div class="paso_desc">Resultado de Operaci&oacute;n</div>
+
+<div class="espacio_vertical_20"></div>
+
+<div class="contenedor_formulario">
+
+	<?php
+
+	echo $form->create('RecargaServicios',
+		array(
+			'url'=> array(
+				'controller'=>'recarga_servicios',
+				'action'=>'afiliados'
+			),
+			'inputDefaults'=>array(
+				'div'=>false,
+				'label'=>'etiqueta',
+				'before'=>'<tr><td class="etiqueta">',
+				'between'=>'</td><td class="campo">',
+				'after'=>'</td></tr>',
+				'error'=>false
+			)
+		)
+	);
+
+	echo $form->hidden('tipoDestinatario');
+	echo $form->hidden('cuentaDebitar');        
+        echo $form->hidden('recarga_minima', array('id'=>'recarga_minima'));
+        echo $form->hidden('recarga_maxima', array('id'=>'recarga_maxima'));
+        //Monto limite Afiliacion
+	echo $form->hidden('monto_maximo', array('id'=>'monto_maximo'));
+        //Monto limite acumulado
+	echo $form->hidden('monto_limite', array('id'=>'monto_limite', 'value'=>$monto_limite));
+        //Monto limite para usuarios juridicos con delegacion
+        echo $form->hidden('monto_limite_usuario', array('id'=>'monto_limite_usuario', 'value'=>$monto_limite_usuario));
+        echo $form->hidden('tipoOperacion');
+        echo $form->hidden('id');
+	
+	echo $html->tag(
+		'table',
+		null,
+		array(
+			'class'=>'formulario',
+			'cellpadding'=>'0',
+			'cellspacing'=>'0',
+			'border'=>'0',
+			'align'=>'center',
+			'style'=>'table-layout:fixed'
+		)
+	);
+	
+	// La primera fila define la tabla con layout fixed
+	echo '<tr><td style="width:180px"></td><td style="width:400px"></td></tr>';
+
+	echo '
+	<tr>
+	<td class="etiqueta" colspan="2">A continuaci&oacute;n proceda a ingresar los datos del pago.</td>
+	</tr>
+	';
+
+	echo '
+	<tr>
+	<td class="etiqueta">Cuenta de Débito:</td>
+	<td> ' . enmascara($recarga['RecargaServicios']['cuentaDebitar']) . ' </td>
+	</tr>
+	';
+
+	echo '<tr><td colspan="2">Seleccione el beneficiario de la recarga y complete los datos de la operación:</td></tr>';
+
+	
+	echo '<tr><td colspan="2">'
+		.'<label for="data[RecargaServicios][numservicio]" class="error manual">'. _m('uno.seleccion.requerida','de los servicios') .'</label>';
+		if ($form->isFieldError('numservicio')){
+			echo $form->error('numservicio',
+				array(
+					'requerido'=>_m('uno.seleccion.requerida','de los servicios')
+				)
+			);
+		}
+	echo '</td></tr>';      
+	?>
+
+	<tr>
+	<td colspan="2">	
+
+	<table cellpadding="0" cellspacing="0" border="0" class="tabla">
+	<thead>
+	<tr>
+	<td class="ancholibre texto_centro"><span class="requerido">* </span></td>
+	<td>Alias</td>
+	<td>Nombre Beneficiario</td>
+	<td>Numero de Servicio</td>
+	</tr>
+	</thead>
+	<tbody>
+	<?php
+	if($servicios){
+		foreach ($resultados as $a){                     
+	?>
+	<tr>
+		<td class="texto_centro ancholibre">
+			<input
+			type="radio"
+			class="seleccion_afiliado"
+			id="<?php echo 'sel'.$a['Afiliacion']['id'] ?>"
+			name="data[RecargaServicios][numservicio]"
+			value="<?php echo $a['Afiliacion']['codigo_telefono'].desencriptar($a['Afiliacion']['numero_cuenta']) ?>"
+			<?php if(
+					isset($this->data['RecargaServicios']['numservicio'])
+					&& 0==strcmp($this->data['RecargaServicios']['numservicio'],$a['Afiliacion']['codigo_telefono'].desencriptar($a['Afiliacion']['numero_cuenta']))
+				){
+				echo 'checked="checked"';
+			}
+			?>
+                        data-datos="<?php echo $a['Afiliacion']['id'].".".desencriptar($a['Afiliacion']['alias']).".".$a['Afiliacion']['tipo_operacion'] ?>"                        
+			/>
+			<?php 
+				echo $form->hidden('seleccion', array('id'=>'monto'.$a['Afiliacion']['id'], 'value'=>empty($a['Afiliacion']['monto_maximo']) ? '' : formatea_monto_fromWs($a['Afiliacion']['monto_maximo']) ));
+			?>
+		</td>
+		<td><?php echo ($a['Afiliacion']['alias']!="") ? desencriptar($a['Afiliacion']['alias']) : 'Alias no asignado' ?></td>
+		<td><?php echo desencriptar($a['Afiliacion']['nombre_beneficiario']) ?></td>
+		<td><?php echo $a['Afiliacion']['codigo_telefono'].desencriptar($a['Afiliacion']['numero_cuenta']) ?></td>
+	</tr>
+	<?php
+		}
+	?>
+		<tr>
+		<td colspan="4" class="paginador">
+			<?php echo $this->element('paginador2',array('form_id'=>'paginacion','total'=>$total_registros,'tamano_paginacion'=>5)); ?>
+		</td>
+		</tr>
+	<?php
+	}
+	else{
+	?>
+	<tr>
+		<td colspan="4" class="texto_centro">No se encontraron resultados...</td>
+	</tr>
+	<?php
+	}
+	?>
+	</tbody>
+	</table>
+	</td>
+	</tr>
+
+	<?php
+
+	echo '<tr><td colspan="2">Indique la informaci&oacute;n que a continuación se solicita:</td></tr>';
+
+	echo $form->input(
+		'alias',
+		array(
+			'label'=>'<span class="requerido">* </span>Alias:',
+			'type'=>'text',
+			'class'=>'alias alfanumericoEspacio',
+			'maxlength' => '30',
+                        'id'=>'txtAlias',
+                        'readonly'=>'readonly'
+		)
+	);
+
+	if ($form->isFieldError('alias')){
+			echo '<tr><td>&nbsp;</td><td>'.$form->error('alias',
+				array(
+					'requerido'=>_m('alias.requerido',array('el alias'))
+				)
+			).'</td></tr>';
+	}        
+        
+	echo $form->input(
+		'monto',
+		array(
+			'label'=>'<span class="requerido">*</span> Monto a pagar Bs.:',
+			'type'=>'text',
+			'class'=>'monto pago'
+		)
+	);
+        
+        ?>
+                        
+        <?php
+        
+	if ($form->isFieldError('monto')){
+			echo '<tr><td>&nbsp;</td><td>'.$form->error('monto',
+				array(					                                    
+                                        'requerido'=>_m('seleccion.requerida','el monto'),
+					'numerico'=>_m('formato.invalido','el monto'),
+					'montoMaximo'=> _m('monto.maximo', 'del numero de servicio'),
+					'monto_limite'=>_m('monto.excedido', 'para la recarga'),                                        
+                                        'montoLimiteUsuario' => _m('monto.limite.usuario', 'de la recarga'),
+					'recargaMinima'=>_m('recarga.minima',$montoMinimo),
+                                        'recargaMaxima'=>_m('recarga.maxima',$montoMaximo)
+				)
+			).'</td></tr>';
+	}
+
+
+	echo $form->input(
+		'descripcion',
+		array(
+			'label'=>'<span class="requerido">*</span> Descripci&oacute;n:',
+			'type'=>'text',
+			'maxlength' => '30',
+			'class' => 'alfanumericoEspacio'
+		)
+	);
+
+	if ($form->isFieldError('descripcion')){
+			echo '<tr><td>&nbsp;</td><td>'.$form->error('descripcion',
+				array(
+					'requerido'=>_m('campo.requerido','la descripción'),
+					'alfanumerico'=>_m('alfanumerico.invalido','la descripción')
+				)
+			).'</td></tr>';
+	}
+	
+	echo '<tr><td colspan="2"><span class="requerido">* </span><span class="requerido2">Campo obligatorio</span></td></tr>';
+	
+        echo '<tr id="notaDigitel" style="display:none">
+                <td colspan="2">
+                    Nota: Estimado Cliente, recuerde que el monto debe ser múltiplo de '. intval(_p('multiplo.digitel')) .' entre Bs. '. formatea_monto_fromWs(_p('recarga_minima_digitel')) .' y '. formatea_monto_fromWs(_p('recarga_maxima_digitel')) .'
+                </td>
+              </tr>';
+        
+	echo '<tr><td>&nbsp;</td><td class="botonera">';
+
+	echo $html->link(
+		'Volver',
+		'recarga_servicios',
+		array(
+			'class'=>'button'
+		)
+	);
+	
+	echo '&nbsp;&nbsp;';
+	
+	echo $html->link(
+		'Aceptar',
+		'javascript:',
+		array(
+			'class'=>'button envio_formulario',
+                        'id'=>'recargar'
+		)
+	);	
+	
+
+	echo '</td></tr></table>';
+
+	echo $form->hidden('offset');
+	echo $form->end();
+
+	?>
+</div>
+<?php	
+echo $form->create(
+	'RecargaServicios',
+	array(
+		'url'=> array(
+			'controller'=>'recarga_servicios',
+			'action'=>$this->action
+		),
+		'id' => 'paginacion'
+	)
+);
+if(!empty($this->data['RecargaServicios'])){
+	foreach($this->data['RecargaServicios'] as $k => $v) {
+		echo $form->hidden($k);
+	}
+}
+echo $form->hidden('offset');
+echo $form->hidden('paginando');
+echo $form->end();
+?>
+
+<script type="text/javascript">
+$(function(){
+        
+        var recarga_minima;
+        var recarga_maxima;
+        $('#notaDigitel').hide();
+        
+        $('.seleccion_afiliado').click(function(){
+            if($(this).prop('checked')){                
+                var datos = $(this).data('datos').split(".");
+                $('#RecargaServiciosId').val(datos[0]);
+                $('#txtAlias').val(datos[1]);
+                $('#RecargaServiciosTipoOperacion').val(datos[2].trim());
+                if(!datos[1].length){
+                    $('#txtAlias').removeAttr('readonly');
+                }else{
+                    $('#txtAlias').attr('readonly',true);
+                }
+                
+                if(datos[2].trim()=='sd'){
+                    recarga_minima = <?php echo _p('recarga_minima_digitel') ?>;
+                    $('#recarga_minima').val(recarga_minima);
+                    recarga_maxima = <?php echo _p('recarga_maxima_digitel') ?>;
+                    $('#recarga_maxima').val(recarga_maxima);
+                    $('#notaDigitel').show();
+                }else{
+                    recarga_minima = <?php echo _p('recarga_minima') ?>;
+                    $('#recarga_minima').val(recarga_minima);
+                    recarga_maxima = <?php echo _p('recarga_maxima') ?>;
+                    $('#recarga_maxima').val(recarga_maxima);                    
+                }
+            }
+        });                
+    
+	$('#RecargaServiciosAfiliadosForm').validate({
+		rules:{
+                        'data[RecargaServicios][alias]':{
+                                required:true
+                        },                     
+			'data[RecargaServicios][numservicio]':{
+				required:true
+			},
+			'data[RecargaServicios][monto]':{
+				required:true, 
+                                numberVE:true, 
+                                montoMaximo: '#monto_maximo',
+				montoMinimo: function(e){
+                                        if($('#RecargaServiciosTipoOperacion').val()!='') return '#recarga_minima';
+                                },                                 
+                                montoMaximo2: function(e){
+					if($('#RecargaServiciosTipoOperacion').val()!='') return '#recarga_maxima';
+                                },
+				montoMaximo3:'#monto_limite',
+                                montoMaximo4: '#monto_limite_usuario',
+                                montoMultiplo:function(e){
+                                        if($('#RecargaServiciosTipoOperacion').val()=='sd') return true;
+                                }
+			},
+			'data[RecargaServicios][descripcion]':{
+				required:true,alphaNumericSpace:true
+			}
+		},
+		messages:{
+                        'data[RecargaServicios][alias]':{
+                                required:<?php echo _m('campo.requerido',array('el alias de la afiliación'), true) ?>
+                        },
+			'data[RecargaServicios][numservicio]':{
+				required:<?php echo _m('seleccion.requerida','el número de servicio o contrato',true) ?>
+			},
+			'data[RecargaServicios][monto]':{
+				required:<?php echo _m('campo.requerido','el monto',true) ?>,
+				numberVE:<?php echo _m('formato.invalido','el monto',true) ?>,
+                                montoMaximo:<?php echo _m('monto.maximo', 'del numero de servicio',true) ?>,
+				montoMinimo: function(e){
+                                    if($('#RecargaServiciosTipoOperacion').val()=='sd'){
+                                        return <?php echo _m('monto.recarga.invalido',array(_p('multiplo.digitel'),formatea_monto_fromWs(_p('recarga_minima_digitel')),formatea_monto_fromWs(_p('recarga_maxima_digitel')),'204'),true) ?>
+                                    }else{
+                                        return <?php echo _m('recarga.minima',  formatea_monto_fromWs(_p('recarga_minima')) ,true) ?>
+                                    }
+                                },                                
+                                montoMaximo2: function(e){
+                                    if($('#RecargaServiciosTipoOperacion').val()=='sd'){
+                                        return <?php echo _m('monto.recarga.invalido',array(_p('multiplo.digitel'),formatea_monto_fromWs(_p('recarga_minima_digitel')),formatea_monto_fromWs(_p('recarga_maxima_digitel')),'204'),true) ?>
+                                    }else{
+                                        return <?php echo _m('recarga.minima',  formatea_monto_fromWs(_p('recarga_maxima')) ,true) ?>
+                                    }
+                                },
+				montoMaximo3: <?php echo _m('monto.excedido', 'de la recarga' ,true) ?>,
+                                montoMaximo4: <?php echo _m('monto.limite.usuario', 'de la recarga' ,true) ?>,
+                                montoMultiplo: <?php echo _m('monto.recarga.invalido',array(_p('multiplo.digitel'),formatea_monto_fromWs(_p('recarga_minima_digitel')),formatea_monto_fromWs(_p('recarga_maxima_digitel')),'204'),true) ?>
+			},
+			'data[RecargaServicios][descripcion]':{
+				required:<?php echo _m('campo.requerido','la descripci&oacute;n',true) ?>,
+				alphaNumericSpace:<?php echo _m('alfanumerico.invalido','la descripci&oacute;n',true) ?>
+			}
+		}	
+	});
+});
+</script>

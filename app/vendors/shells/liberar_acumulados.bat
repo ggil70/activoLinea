@@ -1,0 +1,1 @@
+/usr/share/php/cake/console/cake -app "/var/www/naturales/app" liberar_acumulados
